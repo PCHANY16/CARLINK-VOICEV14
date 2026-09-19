@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<title>CARLINK/JAN V16</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+:root{
+  --g:#8cff9a;
+  --g2:#3cff63;
+  --bg:#061006;
+  --panel:#0a1a0b;
+  --line:#3c8f46;
+  --dim:#579b60;
+  --danger:#ffb347;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  padding:14px;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at center,#102711 0%,#061006 55%,#020502 100%);
+  color:var(--g);
+  font-family:'Share Tech Mono',Consolas,monospace;
+  text-shadow:0 0 7px rgba(100,255,120,.55);
+}
+
+body:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:999;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(140,255,154,.035) 0px,
+    rgba(140,255,154,.035) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
+.card{
+  position:relative;
+  max-width:760px;
+  margin:auto;
+  padding:18px;
+  background:rgba(5,18,6,.94);
+  border:2px solid var(--line);
+  border-radius:5px;
+  box-shadow:
+    0 0 12px rgba(60,255,90,.35),
+    inset 0 0 35px rgba(30,120,40,.16);
+  overflow:hidden;
+}
+
+.card:before{
+  content:"CARLINK // PERSONAL VEHICLE TERMINAL";
+  display:block;
+  padding:7px 10px;
+  margin:-18px -18px 14px;
+  border-bottom:1px solid var(--line);
+  background:#0b210d;
+  color:var(--g2);
+  font-size:12px;
+  letter-spacing:1.5px;
+}
+
+h1{
+  text-align:center;
+  margin:4px 0 14px;
+  font-size:30px;
+  letter-spacing:5px;
+  color:var(--g2);
+}
+
+h1:after{
+  content:" // VOICE CONTROL SYSTEM";
+  font-size:12px;
+  letter-spacing:1px;
+}
+
+hr{
+  border:0;
+  border-top:1px solid var(--line);
+  margin:16px 0;
+}
+
+label,b{
+  color:var(--g2);
+  letter-spacing:.5px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  margin:5px 0 9px;
+  border:1px solid var(--line);
+  border-radius:2px;
+  background:#030b03;
+  color:var(--g);
+  font-family:inherit;
+  font-size:15px;
+  outline:none;
+  box-shadow:inset 0 0 8px rgba(50,255,80,.08);
+}
+
+input:focus{
+  border-color:var(--g2);
+  box-shadow:0 0 8px rgba(60,255,90,.3);
+}
+
+button{
+  width:100%;
+  padding:13px 10px;
+  margin:5px 0;
+  border:1px solid var(--line);
+  border-radius:2px;
+  background:#0b250e;
+  color:var(--g);
+  font-family:inherit;
+  font-size:15px;
+  letter-spacing:1px;
+  cursor:pointer;
+  text-shadow:0 0 6px rgba(100,255,120,.6);
+  box-shadow:inset 0 0 10px rgba(60,255,90,.08);
+}
+
+button:hover{
+  background:#123b16;
+  border-color:var(--g2);
+  box-shadow:0 0 10px rgba(60,255,90,.25),inset 0 0 10px rgba(60,255,90,.12);
+}
+
+button:active{
+  transform:translateY(1px);
+}
+
+.primary{
+  background:#123b16;
+  border-color:var(--g2);
+  color:#b8ffc1;
+}
+
+.stop{
+  background:#211706;
+  border-color:#a56d28;
+  color:var(--danger);
+}
+
+.secondary{
+  background:#091709;
+}
+
+.status{
+  margin:10px 0;
+  padding:11px;
+  border:1px solid var(--line);
+  background:#030b03;
+  color:var(--g2);
+  min-height:20px;
+}
+
+.status:before{
+  content:"> ";
+}
+
+.data{
+  margin:10px 0;
+  padding:13px;
+  border:1px solid var(--line);
+  background:
+    linear-gradient(90deg,rgba(50,180,65,.04),transparent),
+    #030b03;
+  line-height:1.8;
+}
+
+.data span{
+  color:#b8ffc1;
+}
+
+.small{
+  font-size:12px;
+  color:var(--dim);
+  text-shadow:none;
+  line-height:1.5;
+}
+
+.section-title{
+  color:var(--g2);
+  border-bottom:1px dashed var(--line);
+  padding-bottom:5px;
+  margin-top:14px;
+  letter-spacing:2px;
+}
+
+.gps-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.gps-grid .data{
+  margin:0;
+}
+
+@media(max-width:560px){
+  body{padding:6px}
+  .card{padding:12px}
+  .card:before{margin:-12px -12px 12px}
+  h1{font-size:23px;letter-spacing:3px}
+  .gps-grid{grid-template-columns:1fr}
+}
+
+::selection{
+  background:var(--g2);
+  color:#001b04;
+}
+</style>
+
+<style>
+/* ===== CARLINK MODERN DASHBOARD ===== */
+.carlink-dashboard{
+  font-family:Arial,Helvetica,sans-serif;
+  color:#eee;
+  background:#292a2f;
+  border:1px solid #45464d;
+  border-radius:18px;
+  padding:14px;
+  margin:12px 0 20px;
+  box-shadow:0 10px 35px rgba(0,0,0,.35), inset 0 0 25px rgba(0,0,0,.15);
+  text-shadow:none;
+}
+.carlink-dashboard *{box-sizing:border-box;text-shadow:none}
+.cd-title{
+  font-size:27px;
+  color:#ddd;
+  margin:2px 0 10px;
+  font-weight:500;
+}
+.cd-battery-label{
+  font-size:18px;color:#ddd;margin-bottom:7px;
+}
+.cd-battery{
+  height:30px;
+  background:#244c27;
+  border-radius:5px;
+  overflow:hidden;
+  border:1px solid #3e633f;
+  position:relative;
+}
+.cd-battery-fill{
+  height:100%;
+  width:0%;
+  background:#39ff00;
+  transition:width .5s ease;
+}
+.cd-battery-value{
+  text-align:right;
+  color:#cfcfcf;
+  font-size:15px;
+  margin-top:4px;
+}
+.cd-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.cd-card{
+  min-height:135px;
+  background:#2b2c31;
+  border-radius:10px;
+  padding:8px 4px 12px;
+  position:relative;
+}
+.cd-label{
+  font-size:20px;
+  color:#ddd;
+  margin:0 0 5px 0;
+}
+.cd-value{
+  font-family:Consolas,monospace;
+  font-size:42px;
+  line-height:1;
+  letter-spacing:-2px;
+}
+.cd-unit{
+  font-size:20px;
+  margin-left:2px;
+}
+.green{color:#35ff18}
+.yellow{color:#fff000}
+.cyan{color:#00f5d4}
+.red{color:#ff443b}
+.magenta{color:#f000d9}
+.white{color:#eee}
+
+.cd-gauge-wrap{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:4px 0 0;
+}
+.cd-gauge{
+  width:165px;height:165px;border-radius:50%;
+  background:conic-gradient(#ff3b30 0deg,var(--gauge-angle,70deg),#494a50 var(--gauge-angle,70deg) 360deg);
+  position:relative;
+}
+.cd-gauge:before{
+  content:"";
+  position:absolute;inset:15px;
+  background:#292a2f;border-radius:50%;
+}
+.cd-gauge-text{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;
+  z-index:2;
+}
+.cd-gauge-temp{font:42px Consolas,monospace;color:#ff4b42}
+.cd-gauge-unit{font-size:15px;color:#ddd}
+.cd-gauge-scale{
+  display:flex;justify-content:space-between;
+  color:#ddd;font-size:14px;padding:0 12px;margin-top:-4px;
+}
+.cd-speed{
+  width:190px;height:190px;border-radius:50%;
+  border:5px solid #ed00d4;
+  margin:0 auto;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  box-shadow:0 0 9px rgba(237,0,212,.15);
+}
+.cd-speed-unit{font-size:21px;color:#ddd}
+.cd-speed-value{font:42px Consolas,monospace;color:#ed00d4}
+.cd-status-dot{
+  width:82px;height:82px;border-radius:50%;
+  border:5px solid #47484f;margin:13px auto;
+  transition:.3s;
+}
+.cd-status-dot.on{border-color:#32ff17;box-shadow:0 0 16px rgba(50,255,23,.35);background:rgba(50,255,23,.08)}
+.cd-status-dot.off{border-color:#555}
+.cd-session{
+  font:42px Consolas,monospace;color:#eee;
+}
+.cd-wide{
+  grid-column:1/-1;
+  min-height:auto;
+}
+.cd-mini-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px
+}
+.cd-mini{
+  background:#232429;border-radius:8px;padding:10px;min-height:75px
+}
+.cd-mini .m-label{font-size:13px;color:#aaa}
+.cd-mini .m-val{font:22px Consolas,monospace;margin-top:4px}
+.cd-section-title{
+  margin:16px 0 8px;color:#bbb;font-size:18px;border-bottom:1px solid #484950;padding-bottom:5px
+}
+@media(max-width:600px){
+ .cd-grid{grid-template-columns:1fr 1fr;gap:8px}
+ .cd-label{font-size:17px}
+ .cd-value{font-size:31px}
+ .cd-gauge{width:140px;height:140px}
+ .cd-speed{width:155px;height:155px}
+ .cd-speed-value{font-size:34px}
+ .cd-mini-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+
+</head>
+<body>
+<div class="card">
+<h1>CARLINK/JAN V16</h1>
+<div class="status" style="text-align:center">
+BOOT SEQUENCE COMPLETE // CARLINK ONLINE
+</div>
+
+<div class="carlink-dashboard" id="carlinkDashboard">
+  <div class="cd-title">CARLINK // VEHICLE MONITOR</div>
+
+  <div class="cd-battery-label">Porcentaje de Batería</div>
+  <div class="cd-battery">
+    <div class="cd-battery-fill" id="dashBatteryFill"></div>
+  </div>
+  <div class="cd-battery-value"><span id="dashBattery">---</span>%</div>
+
+  <div class="cd-grid">
+    <div class="cd-card">
+      <div class="cd-label">Voltaje</div>
+      <div class="cd-value green"><span id="dashVoltage">---</span><span class="cd-unit">V</span></div>
+    </div>
+
+    <div class="cd-card">
+      <div class="cd-label">Corriente</div>
+      <div class="cd-value yellow"><span id="dashCurrent">---</span><span class="cd-unit">A</span></div>
+    </div>
+
+    <div class="cd-card">
+      <div class="cd-label">Temperatura</div>
+      <div class="cd-gauge-wrap">
+        <div class="cd-gauge" id="dashTempGauge" style="--gauge-angle:0deg">
+          <div class="cd-gauge-text">
+            <div class="cd-gauge-temp"><span id="dashTemp">---</span></div>
+            <div class="cd-gauge-unit">°C</div>
+          </div>
+        </div>
+      </div>
+      <div class="cd-gauge-scale"><span>0</span><span>120</span></div>
+    </div>
+
+    <div class="cd-card">
+      <div class="cd-label">Desplazamiento</div>
+      <div class="cd-speed">
+        <div class="cd-speed-unit">mph</div>
+        <div class="cd-speed-value"><span id="dashSpeed">---</span><span style="font-size:17px">mi/h</span></div>
+      </div>
+    </div>
+
+    <div class="cd-card">
+      <div class="cd-label">Potencia</div>
+      <div class="cd-value cyan"><span id="dashPower">---</span><span class="cd-unit">kW</span></div>
+    </div>
+
+    <div class="cd-card">
+      <div class="cd-label">Status</div>
+      <div class="cd-status-dot off" id="dashStatusDot"></div>
+      <div style="text-align:center;color:#bbb;font-size:14px" id="dashStatusText">SIN DATOS</div>
+    </div>
+
+    <div class="cd-card cd-wide">
+      <div class="cd-label">Historial de Sesión</div>
+      <div class="cd-session"><span id="dashSession">---</span><span style="font-size:18px"> Session</span></div>
+    </div>
+
+    <div class="cd-wide">
+      <div class="cd-section-title">CARLINK // DATOS DE VIAJE</div>
+      <div class="cd-mini-grid">
+        <div class="cd-mini">
+          <div class="m-label">Distancia recorrida</div>
+          <div class="m-val green"><span id="dashV8">---</span> km</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">Energía consumida</div>
+          <div class="m-val cyan"><span id="dashV9">---</span> Wh</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">Consumo</div>
+          <div class="m-val yellow"><span id="dashV10">---</span> Wh/km</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">Autonomía</div>
+          <div class="m-val green"><span id="dashV11">---</span> km</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">Distancia al destino</div>
+          <div class="m-val magenta"><span id="dashV12">---</span> km</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">Energía necesaria</div>
+          <div class="m-val cyan"><span id="dashV13">---</span> Wh</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">Energía restante</div>
+          <div class="m-val green"><span id="dashV14">---</span> Wh</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">¿Alcanza?</div>
+          <div class="m-val" id="dashV15">---</div>
+        </div>
+        <div class="cd-mini">
+          <div class="m-label">Emergencia</div>
+          <div class="m-val" id="dashV16">---</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="small" style="margin-top:10px;color:#888">
+    BLYNK CLOUD // actualización automática de V0–V16
+  </div>
+</div>
+
+
+<input id="token" type="password" placeholder="Pega aquí tu Auth Token">
+<button class="secondary" onclick="saveToken()">💾 Guardar token</button>
+
+<div class="status" id="status">Estado: esperando...</div>
+<div class="small">Comando de voz: <b>"Silencio"</b> = cancela la voz. Pulsa <b>HABLAR</b> para volver a activarla.</div>
+
+<button class="primary" onclick="startGPS()">📍 INICIAR GPS</button>
+<button class="stop" onclick="stopGPS()">⏹ DETENER GPS</button>
+
+<div class="section-title">[ MAP // GPS ]</div><div class="data">
+<b>GPS // POSITION SYSTEM // VOICE COMMANDS</b><br>
+Estado: <span id="gpsStatus">Detenido</span><br>
+Latitud: <span id="lat">---</span><br>
+Longitud: <span id="lon">---</span><br>
+Distancia recorrida: <span id="distance">0.000</span> km
+</div>
+
+<hr>
+
+<div class="section-title">[ MAP // DESTINATION SELECTOR ]</div>
+<b>TOCA EL MAPA PARA ELEGIR TU DESTINO</b>
+
+<div id="carlinkMap" style="height:360px;margin-top:10px;border:1px solid var(--line);background:#061006;"></div>
+
+<div class="data">
+Destino: <span id="destinationName">Sin destino</span><br>
+Latitud: <span id="destLatText">---</span><br>
+Longitud: <span id="destLonText">---</span><br>
+Distancia por carretera: <span id="destDistance">---</span> km<br>
+Tiempo estimado: <span id="routeTime">---</span><br>
+Estado de llegada: <span id="arrival">---</span>
+</div>
+
+<button class="secondary" onclick="clearDestination()">✕ QUITAR DESTINO</button>
+
+<div class="small">
+Toca cualquier punto del mapa y CARLINK lo guardará automáticamente como destino.
+La ruta y distancia se calculan por carretera usando el servicio de rutas.
+<br><br>
+Comandos: "Inicia el GPS" · "¿Dónde estoy?" · "Marca este lugar como punto A" ·
+"Guarda esta ubicación" · "Establece este lugar como destino" ·
+"Marca este lugar como punto B" · "¿Cuánto falta para llegar?"<br><br>
+El GPS del teléfono necesita permiso de ubicación. La distancia al destino calculada aquí es en línea recta, no por carretera.
+</div>
+<div class="small" style="text-align:center;margin-top:14px">
+CARLINK OS // PIP-BOY INSPIRED TERMINAL // SYSTEM READY
+</div>
+</div>
+
+<script>
+let TOKEN = localStorage.getItem("carlink_token") || "";
+window.addEventListener("DOMContentLoaded",()=>{const t=document.getElementById("token");if(t)t.value=TOKEN;});
+
+let watchId = null;
+let lastLat = null, lastLon = null;
+let totalDistance = 0;
+let lastGPSms = 0;
+
+// Control de voz: "Silencio" cancela la voz hasta volver a pulsar HABLAR.
+// Puntos GPS guardados por comandos de voz.
+let pointA = null;
+let pointB = null;
+
+const names = {
+ V0:"voltaje", V1:"corriente", V2:"temperatura", V3:"velocidad",
+ V4:"potencia", V5:"batería", V6:"sesión", V7:"estado",
+ V8:"distancia recorrida", V9:"energía consumida", V10:"consumo",
+ V11:"autonomía", V12:"distancia al destino", V13:"energía necesaria",
+ V14:"energía restante", V15:"estado de llegada", V16:"emergencia"
+};
+
+function saveToken(){
+ TOKEN=document.getElementById("token").value.trim();
+ localStorage.setItem("carlink_token",TOKEN);
+ setStatus("Token guardado.");
+}
+
+function setStatus(t){document.getElementById("status").textContent="Estado: "+t;}
+
+function speak(text, special=false){
+ if(!("speechSynthesis" in window)) return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="es-HN";
+ u.rate=special ? 0.82 : 0.94;
+ u.pitch=special ? 1.38 : 1.16;
+ const voices=speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+ const spanish=voices.filter(v=>/^es(-|_)/i.test(v.lang));
+ const femaleWords=/female|mujer|woman|femenina|sofia|monica|paulina|luciana|helena|elena|maria|carmen|laura/i;
+ const female=spanish.find(v=>femaleWords.test(v.name));
+ const preferred=female || spanish.find(v=>/google|microsoft|natural|online/i.test(v.name)) || spanish[0];
+ if(preferred) u.voice=preferred;
+ speechSynthesis.speak(u);
+}
+
+async function getV(pin){
+ if(!TOKEN) throw new Error("Primero coloca el Auth Token.");
+ const url=`https://blynk.cloud/external/api/get?token=${encodeURIComponent(TOKEN)}&${pin}`;
+ const r=await fetch(url);
+ if(!r.ok) throw new Error("Blynk no respondió.");
+ const txt=await r.text();
+ return parseFloat(txt);
+}
+
+async function setV(pin,value){
+ if(!TOKEN) throw new Error("Primero coloca el Auth Token.");
+ const url=`https://blynk.cloud/external/api/update?token=${encodeURIComponent(TOKEN)}&${pin}=${encodeURIComponent(value)}`;
+ const r=await fetch(url);
+ if(!r.ok) throw new Error("No se pudo actualizar "+pin);
+}
+
+function fmt(v){
+ if(Number.isNaN(v)) return "sin dato";
+ return Number(v).toFixed(2);
+}
+
+async function readPins(pins){
+ const out={};
+ for(const p of pins) out[p]=await getV(p);
+ return out;
+}
+
+function haversine(lat1,lon1,lat2,lon2){
+ const R=6371;
+ const dLat=(lat2-lat1)*Math.PI/180;
+ const dLon=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dLat/2)**2+
+   Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+ return 2*R*Math.asin(Math.sqrt(a));
+}
+
+function startGPS(){
+ if(!navigator.geolocation){
+   setStatus("Este navegador no soporta GPS.");
+   speak("Este navegador no soporta GPS.");
+   return;
+ }
+ if(watchId!==null) return;
+ setStatus("Solicitando ubicación...");
+ document.getElementById("gpsStatus").textContent="Buscando señal...";
+ watchId=navigator.geolocation.watchPosition(gpsSuccess,gpsError,{
+   enableHighAccuracy:true, maximumAge:1000, timeout:10000
+ });
+ speak("GPS iniciado.");
+}
+
+function stopGPS(){
+ if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+ watchId=null;
+ document.getElementById("gpsStatus").textContent="Detenido";
+ setStatus("GPS detenido.");
+}
+
+async function gpsSuccess(pos){
+ const lat=pos.coords.latitude;
+ const lon=pos.coords.longitude;
+ const accuracy=pos.coords.accuracy || 999;
+
+ document.getElementById("lat").textContent=lat.toFixed(6);
+ document.getElementById("lon").textContent=lon.toFixed(6);
+ document.getElementById("gpsStatus").textContent="Activo ±"+Math.round(accuracy)+" m";
+
+ if(lastLat!==null){
+   const d=haversine(lastLat,lastLon,lat,lon);
+   // Evita sumar saltos producidos por el ruido del GPS.
+   if(d>=0.003 && d<0.2) totalDistance+=d;
+ }
+ lastLat=lat;
+ lastLon=lon;
+ document.getElementById("distance").textContent=totalDistance.toFixed(3);
+if(carlinkMap && typeof L!=="undefined"){
+  if(!currentMarker){
+    currentMarker=L.circleMarker([lat,lon],{
+      radius:8,color:"#3cff63",fillColor:"#8cff9a",fillOpacity:.9
+    }).addTo(carlinkMap).bindPopup("TU UBICACIÓN");
+    carlinkMap.setView([lat,lon],15);
+  }else{
+    currentMarker.setLatLng([lat,lon]);
+  }
+  if(pointB) updateRoadRoute(false);
+}
+
+
+ // Actualiza V8. Si el navegador bloquea CORS para update, el valor
+ // seguirá mostrándose localmente y se puede sincronizar después.
+ try{
+   await setV("V8",totalDistance);
+ }catch(e){
+   console.log("No se pudo actualizar V8 desde el navegador:",e.message);
+ }
+ lastGPSms=Date.now();
+
+ if(pointB){ calculateDestination(false); }
+}
+
+function gpsError(err){
+ let msg="No se pudo obtener la ubicación.";
+ if(err.code===1) msg="Permiso de ubicación denegado.";
+ if(err.code===2) msg="Ubicación no disponible.";
+ if(err.code===3) msg="Tiempo agotado buscando GPS.";
+ setStatus(msg);
+ document.getElementById("gpsStatus").textContent=msg;
+}
+
+
+function savePointA(){
+ if(lastLat===null){
+   speak("Primero inicia el GPS.");
+   return;
+ }
+ pointA={lat:lastLat,lon:lastLon};
+ speak(`Punto A guardado en ${lastLat.toFixed(6)}, ${lastLon.toFixed(6)}.`);
+}
+
+async function savePointB(){
+ if(lastLat===null){
+   speak("Primero inicia el GPS.");
+   return;
+ }
+ pointB={lat:lastLat,lon:lastLon};
+ setDestinationFromMap(lastLat,lastLon);
+ speak("Punto B guardado en tu ubicación actual.");
+ await calculateDestination(false);
+}
+
+function reportLocation(){
+ if(lastLat===null){
+   speak("Todavía no tengo una ubicación GPS. Inicia el GPS primero.");
+   return;
+ }
+ speak(`Tu ubicación actual es latitud ${lastLat.toFixed(6)} y longitud ${lastLon.toFixed(6)}.`);
+}
+
+async function calculateDestination(announce=true){
+ if(pointB) await updateRoadRoute(announce);
+ else speak("Selecciona primero el destino tocando el mapa.");
+}
+
+async function vehicleSummary(){
+ const p=await readPins(["V0","V1","V2","V3","V4","V5","V8","V9","V10","V11","V14"]);
+ return `Batería al ${fmt(p.V5)} por ciento. Voltaje ${fmt(p.V0)} voltios. Corriente ${fmt(p.V1)} amperios. Potencia ${fmt(p.V4)} watts. Temperatura del motor ${fmt(p.V2)} grados. Velocidad ${fmt(p.V3)} kilómetros por hora. Has recorrido ${fmt(p.V8)} kilómetros. Has consumido ${fmt(p.V9)} vatios hora. Tu consumo es de ${fmt(p.V10)} vatios hora por kilómetro. Tu autonomía estimada es de ${fmt(p.V11)} kilómetros y tienes ${fmt(p.V14)} vatios hora restantes.`;
+}
+
+
+let carlinkMap=null, currentMarker=null, destinationMarker=null;
+
+
+// ===== BLYNK -> CARLINK VISUAL DASHBOARD =====
+function dashNum(v, digits=2){
+  return Number.isFinite(Number(v)) ? Number(v).toFixed(digits) : "---";
+}
+function setDashText(id, value){
+  const el=document.getElementById(id);
+  if(el) el.textContent=value;
+}
+async function refreshCarlinkDashboard(){
+  if(!TOKEN) return;
+  try{
+    const pins=["V0","V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16"];
+    const vals={};
+    for(const pin of pins){
+      try{ vals[pin]=await getV(pin); }catch(e){ vals[pin]=NaN; }
+    }
+
+    setDashText("dashVoltage",dashNum(vals.V0,2));
+    setDashText("dashCurrent",dashNum(vals.V1,1));
+    setDashText("dashTemp",dashNum(vals.V2,1));
+    setDashText("dashSpeed",dashNum(vals.V3,0));
+    setDashText("dashPower",Number.isFinite(vals.V4)?(vals.V4/1000).toFixed(2):"---");
+    setDashText("dashBattery",dashNum(vals.V5,0));
+    setDashText("dashSession",dashNum(vals.V6,0));
+    setDashText("dashV8",dashNum(vals.V8,2));
+    setDashText("dashV9",dashNum(vals.V9,1));
+    setDashText("dashV10",dashNum(vals.V10,2));
+    setDashText("dashV11",dashNum(vals.V11,2));
+    setDashText("dashV12",dashNum(vals.V12,2));
+    setDashText("dashV13",dashNum(vals.V13,1));
+    setDashText("dashV14",dashNum(vals.V14,1));
+
+    const batt=Math.max(0,Math.min(100,Number(vals.V5)||0));
+    const fill=document.getElementById("dashBatteryFill");
+    if(fill) fill.style.width=batt+"%";
+
+    const temp=Math.max(0,Math.min(120,Number(vals.V2)||0));
+    const angle=(temp/120)*360;
+    const gauge=document.getElementById("dashTempGauge");
+    if(gauge) gauge.style.setProperty("--gauge-angle",angle+"deg");
+
+    const dot=document.getElementById("dashStatusDot");
+    const st=document.getElementById("dashStatusText");
+    if(dot && st){
+      if(Number(vals.V7)===1){
+        dot.className="cd-status-dot on";
+        st.textContent="ACTIVO";
+      }else{
+        dot.className="cd-status-dot off";
+        st.textContent="INACTIVO";
+      }
+    }
+
+    const reach=document.getElementById("dashV15");
+    if(reach){
+      if(Number(vals.V15)===1){reach.textContent="ALCANZA";reach.style.color="#35ff18";}
+      else if(Number(vals.V15)===0){reach.textContent="NO ALCANZA";reach.style.color="#ff443b";}
+      else {reach.textContent="SIN DESTINO";reach.style.color="#ddd";}
+    }
+
+    const emergency=document.getElementById("dashV16");
+    if(emergency){
+      if(Number(vals.V16)===1){emergency.textContent="🚨 ACTIVA";emergency.style.color="#ff443b";}
+      else {emergency.textContent="NORMAL";emergency.style.color="#35ff18";}
+    }
+  }catch(e){
+    console.log("Dashboard Blynk:",e.message);
+  }
+}
+
+function initCarlinkMap(){
+ if(typeof L==="undefined") return;
+ carlinkMap=L.map("carlinkMap").setView([14.0723,-87.1921],13);
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+   maxZoom:19,
+   attribution:"© OpenStreetMap contributors"
+ }).addTo(carlinkMap);
+ carlinkMap.on("click",e=>setDestinationFromMap(e.latlng.lat,e.latlng.lng));
+}
+
+function setDestinationFromMap(lat,lon){
+ pointB={lat,lon};
+ document.getElementById("destLatText").textContent=lat.toFixed(6);
+ document.getElementById("destLonText").textContent=lon.toFixed(6);
+ document.getElementById("destinationName").textContent="Destino seleccionado en el mapa";
+ if(destinationMarker) destinationMarker.remove();
+ destinationMarker=L.marker([lat,lon]).addTo(carlinkMap).bindPopup("DESTINO CARLINK").openPopup();
+ setStatus("Destino seleccionado. Calculando ruta...");
+ if(lastLat!==null) updateRoadRoute(false);
+}
+
+async function updateRoadRoute(announce=true){
+ if(lastLat===null || !pointB){
+   if(announce) speak("Necesito tu ubicación actual y un destino.");
+   return;
+ }
+ try{
+   const url=`https://router.project-osrm.org/route/v1/driving/${lastLon},${lastLat};${pointB.lon},${pointB.lat}?overview=false`;
+   const r=await fetch(url);
+   const data=await r.json();
+   if(data.code!=="Ok" || !data.routes?.length) throw new Error("No route");
+   const route=data.routes[0];
+   const km=route.distance/1000;
+   const minutes=route.duration/60;
+   document.getElementById("destDistance").textContent=km.toFixed(2);
+   document.getElementById("routeTime").textContent=minutes<60?`${Math.round(minutes)} min`:`${Math.floor(minutes/60)} h ${Math.round(minutes%60)} min`;
+   try{await setV("V12",km);}catch(e){}
+   try{
+     const autonomy=await getV("V11");
+     if(Number.isFinite(autonomy)){
+       const state=autonomy>=km?1:0;
+       document.getElementById("arrival").textContent=state===1?"Alcanza":"No alcanza";
+       try{await setV("V15",state);}catch(e){}
+     }
+   }catch(e){}
+   setStatus(`Ruta: ${km.toFixed(2)} km`);
+   if(announce) speak(`Faltan ${km.toFixed(2)} kilómetros por carretera. Tiempo estimado, ${Math.round(minutes)} minutos.`);
+ }catch(e){
+   document.getElementById("destDistance").textContent="---";
+   document.getElementById("routeTime").textContent="No disponible";
+   setStatus("No se pudo calcular la ruta.");
+   if(announce) speak("No pude calcular una ruta por carretera.");
+ }
+}
+
+function clearDestination(){
+ pointB=null;
+ if(destinationMarker){destinationMarker.remove();destinationMarker=null;}
+ document.getElementById("destinationName").textContent="Sin destino";
+ document.getElementById("destLatText").textContent="---";
+ document.getElementById("destLonText").textContent="---";
+ document.getElementById("destDistance").textContent="---";
+ document.getElementById("routeTime").textContent="---";
+ document.getElementById("arrival").textContent="---";
+ setV("V12",0).catch(()=>{});
+ setV("V15",2).catch(()=>{});
+ setStatus("Destino eliminado.");
+}
+
+async function answerQuestion(q){
+ q=q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+
+ // Comando especial: Silencio. Cancela inmediatamente cualquier voz.
+ if(q.trim().includes("silencio")){
+   silenceVoice();
+   return;
+ }
+
+ // GPS: iniciar / activar seguimiento.
+ if(q.includes("inicia el gps") || q.includes("iniciar el gps") ||
+    q.includes("activa el gps") || q.includes("activar el gps") ||
+    q.includes("enciende el gps") || q.includes("enciende gps")){
+   startGPS();
+   return;
+ }
+
+ // GPS: ubicación actual.
+ if(q.includes("donde estoy") || q.includes("cual es mi ubicacion") ||
+    q.includes("dime mi ubicacion") || q.includes("mi ubicacion actual")){
+   reportLocation();
+   return;
+ }
+
+ // GPS: guardar punto A.
+ if(q.includes("marca este lugar como punto a") ||
+    q.includes("marca este lugar como a") ||
+    q.includes("guarda esta ubicacion") ||
+    q.includes("guarda este lugar") ||
+    q.includes("guarda aqui como punto a")){
+   savePointA();
+   return;
+ }
+
+ // GPS: guardar punto B / destino.
+ if(q.includes("establece este lugar como destino") ||
+    q.includes("establece este lugar como punto b") ||
+    q.includes("marca este lugar como punto b") ||
+    q.includes("marca este lugar como destino") ||
+    q.includes("guarda este lugar como punto b")){
+   await savePointB();
+   return;
+ }
+
+ if(q.includes("llamada de emergencia") || q.includes("emergencia")){
+   await setV("V16",1).catch(()=>{});
+   speak("¿Quién lo solicita?");
+   const name=await listenOnce();
+   const n=name.toLowerCase();
+   if(n.includes("astrid")||n.includes("astrid")){
+     speak("Astrid confirmada. Preparando la llamada de emergencia al 911.");
+     setTimeout(()=>{window.location.href="tel:911";},2200);
+   }else if(n.includes("chany") || n.includes("chani")){
+     speak("Enseguida lindo.",true);
+     const audio=document.getElementById("emergencyPlayer");
+     if(audio && audio.src) audio.play().catch(()=>{});
+   }else{
+     speak("Nombre no reconocido. Emergencia cancelada.");
+     await setV("V16",0).catch(()=>{});
+   }
+   return;
+ }
+
+ if(q.includes("puedo llegar") || q.includes("me alcanza") || q.includes("suficiente bateria para llegar")){
+   const p=await readPins(["V11","V12","V13","V14","V15"]);
+   let state=p.V15;
+   let msg=`La distancia al destino es ${fmt(p.V12)} kilómetros. Tu autonomía estimada es ${fmt(p.V11)} kilómetros. La energía necesaria es ${fmt(p.V13)} vatios hora y tienes ${fmt(p.V14)} vatios hora restantes.`;
+   if(state===1) msg+=" Sí puedes llegar según los datos actuales.";
+   else if(state===0) msg+=" La autonomía estimada no alcanza para el destino.";
+   else msg+=" No hay un destino establecido.";
+   speak(msg); return;
+ }
+
+ if(q.includes("resumen") || q.includes("estado general") || q.includes("como esta el vehiculo")){
+   speak(await vehicleSummary()); return;
+ }
+
+ const rules=[
+  {pins:["V5"], test:x=>x.includes("bateria")||x.includes("carga"), msg:p=>`Tienes ${fmt(p.V5)} por ciento de batería.`},
+  {pins:["V0"], test:x=>x.includes("voltaje")||x.includes("voltios"), msg:p=>`El voltaje es ${fmt(p.V0)} voltios.`},
+  {pins:["V1"], test:x=>x.includes("corriente")||x.includes("amperios"), msg:p=>`La corriente es de ${fmt(p.V1)} amperios.`},
+  {pins:["V2"], test:x=>x.includes("temperatura")||x.includes("caliente"), msg:p=>`La temperatura del motor es de ${fmt(p.V2)} grados.`},
+  {pins:["V3"], test:x=>x.includes("velocidad")||x.includes("rapido")||x.includes("a que velocidad"), msg:p=>`Vas a ${fmt(p.V3)} kilómetros por hora.`},
+  {pins:["V4"], test:x=>x.includes("potencia")||x.includes("watts")||x.includes("vatios"), msg:p=>`La potencia actual es de ${fmt(p.V4)} watts.`},
+  {pins:["V8"], test:x=>x.includes("distancia recorrida")||x.includes("cuanto he recorrido")||x.includes("kilometros llevo"), msg:p=>`Has recorrido ${fmt(p.V8)} kilómetros.`},
+  {pins:["V9"], test:x=>x.includes("energia consumida")||x.includes("energia he consumido")||x.includes("gastado de energia"), msg:p=>`Has consumido ${fmt(p.V9)} vatios hora.`},
+  {pins:["V10"], test:x=>x.includes("consumo")||x.includes("wh por kilometro"), msg:p=>`Tu consumo es de ${fmt(p.V10)} vatios hora por kilómetro.`},
+  {pins:["V11"], test:x=>x.includes("autonomia")||x.includes("hasta donde puedo llegar")||x.includes("cuanto puedo recorrer"), msg:p=>`Tu autonomía estimada es de ${fmt(p.V11)} kilómetros.`},
+  {pins:["V12"], test:x=>x.includes("distancia al destino")||x.includes("cuanto falta")||x.includes("que distancia falta")||x.includes("distancia que falta")||x.includes("kilometros faltan"), msg:p=>`Faltan ${fmt(p.V12)} kilómetros para el destino.`},
+  {pins:["V13"], test:x=>x.includes("energia necesaria"), msg:p=>`La energía necesaria estimada es de ${fmt(p.V13)} vatios hora.`},
+  {pins:["V14"], test:x=>x.includes("energia restante")||x.includes("energia me queda"), msg:p=>`Te quedan ${fmt(p.V14)} vatios hora.`},
+  {pins:["V6"], test:x=>x.includes("sesion")||x.includes("numero de sesion"), msg:p=>`La sesión actual es la número ${fmt(p.V6)}.`},
+  {pins:["V7"], test:x=>x.includes("sistema esta activo")||x.includes("esta funcionando")||x.includes("estado del sistema"), msg:p=>`El estado del sistema es ${p.V7?"activo":"inactivo"}.`}
+ ];
+
+ for(const r of rules){
+   if(r.test(q)){
+     const p=await readPins(r.pins);
+     speak(r.msg(p)); return;
+   }
+ }
+
+ speak("No reconocí esa pregunta. Puedes preguntarme por batería, voltaje, corriente, temperatura, velocidad, potencia, distancia, consumo, autonomía, destino o decir: ¿puedo llegar?");
+}
+
+function listenOnce(){
+ return new Promise((resolve,reject)=>{
+   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+   if(!SR){reject(new Error("Reconocimiento de voz no disponible"));return;}
+   const r=new SR();
+   r.lang="es-HN";r.interimResults=false;r.maxAlternatives=1;
+   r.onresult=e=>resolve(e.results[0][0].transcript);
+   r.onerror=e=>reject(e.error);
+   r.start();
+ });
+}
+
+</script>
+
+<section id="carlinkSettings" class="carlink-settings">
+  <div class="section-title">[ SYSTEM // SETTINGS ]</div>
+  <div class="settings-row">
+    <div class="settings-icon">⚙</div>
+    <div class="settings-content">
+      <label for="janetEmergencyAudio">Audio de emergencia</label>
+      <div class="settings-sub">Audio que JANET reproducirá para Chany/Chani.</div>
+      <input id="janetEmergencyAudio" type="file" accept=".mp3,audio/mpeg,audio/*">
+      <label class="settings-button" for="janetEmergencyAudio">⚙ Configurar audio</label>
+      <span id="janetAudioName" class="settings-file">No configurado</span>
+    </div>
+  </div>
+  <div class="settings-row">
+    <div class="settings-icon">🔐</div>
+    <div class="settings-content">
+      <label for="token">Blynk Auth Token</label>
+      <div class="settings-sub">Token para consultar y actualizar los datos de Blynk.</div>
+      <input id="token" type="password" placeholder="Pega aquí tu Auth Token">
+      <button class="settings-button" type="button" onclick="saveToken()">Guardar token</button>
+    </div>
+  </div>
+  <audio id="emergencyPlayer" preload="auto" style="display:none"></audio>
+</section>
+<style>
+.carlink-settings{margin-top:30px;padding:14px;border-top:1px solid rgba(105,255,154,.18);opacity:.72}
+.settings-row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid rgba(105,255,154,.10)}
+.settings-icon{width:28px;flex:0 0 28px;text-align:center;color:#86a98f;font-size:17px}
+.settings-content{min-width:0;flex:1}.settings-content label:not(.settings-button){display:block;color:#9cc9a8;font-size:12px;margin-bottom:3px}
+.settings-sub{color:#607b68;font-size:10px;margin-bottom:7px}.settings-content input[type=password]{margin:0 0 7px}.settings-content input[type=file]{display:none}
+.settings-button{display:inline-block;width:auto!important;padding:6px 10px;border:1px solid rgba(105,255,154,.3);border-radius:5px;color:#8fb99a;background:rgba(8,30,12,.6);cursor:pointer;font-family:inherit;font-size:11px;text-shadow:none}
+.settings-file{display:block;margin-top:5px;color:#607b68;font-size:10px;word-break:break-word}
+</style>
+<script>
+(function(){
+ const input=document.getElementById('janetEmergencyAudio');
+ const player=document.getElementById('emergencyPlayer');
+ const name=document.getElementById('janetAudioName');
+ if(input) input.addEventListener('change',function(){const f=this.files&&this.files[0];if(!f)return;if(player)player.src=URL.createObjectURL(f);if(name)name.textContent=f.name;});
+})();
+</script>
+
+<script>
+(function(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ const statusEl=document.getElementById('status');
+ const janetEl=document.getElementById('janetStatus');
+ let rec=null, starting=false, commandMode=false, busy=false, ignoreUntil=0;
+ function jstatus(t){if(janetEl)janetEl.textContent='MICRÓFONO: '+t;}
+ function norm(t){return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+ function stopSpeech(){if('speechSynthesis' in window)speechSynthesis.cancel();}
+ function speakJanet(text,special=false){speak(text,special); ignoreUntil=Date.now()+Math.max(1200,text.length*45);}
+ async function handle(text){
+   const q=norm(text); if(!q)return;
+   if(q.includes('janet') && q.includes('silencio')){stopSpeech();commandMode=false;busy=false;jstatus('ESPERANDO “JANET”');return;}
+   if(!commandMode){
+     const i=q.indexOf('janet'); if(i<0)return;
+     const after=q.slice(i+5).trim();
+     commandMode=true;
+     if(after){busy=true;jstatus('JANET ACTIVADA // PROCESANDO...');try{await answerQuestion(after);}catch(e){speakJanet('Ocurrió un error al consultar CARLINK.');}busy=false;commandMode=false;jstatus('ESPERANDO “JANET”');}
+     else {speakJanet('Te escucho.');jstatus('JANET ACTIVADA // ESPERANDO PREGUNTA...');}
+     return;
+   }
+   if(q.includes('silencio')){stopSpeech();commandMode=false;busy=false;jstatus('ESPERANDO “JANET”');return;}
+   busy=true;jstatus('ORDEN RECIBIDA: '+text);
+   try{await answerQuestion(q);}catch(e){setStatus(e.message||'Error');speakJanet('Ocurrió un error al consultar CARLINK.');}
+   busy=false;commandMode=false;jstatus('ESPERANDO “JANET”');
+ }
+ function start(){
+   if(!SR){jstatus('NAVEGADOR SIN RECONOCIMIENTO DE VOZ');return;}
+   if(rec||starting)return; starting=true;
+   rec=new SR(); rec.lang='es-HN'; rec.continuous=true; rec.interimResults=false; rec.maxAlternatives=3;
+   rec.onstart=()=>{starting=false;jstatus(commandMode?'JANET ACTIVADA // ESCUCHANDO':'ESPERANDO “JANET”');};
+   rec.onresult=e=>{if(Date.now()<ignoreUntil)return; const r=e.results[e.results.length-1]; if(!r.isFinal)return; const t=r[0].transcript; handle(t);};
+   rec.onerror=e=>{console.log('JANET voice:',e.error);if(e.error==='not-allowed'||e.error==='service-not-allowed'){jstatus('PERMISO DE MICRÓFONO REQUERIDO');rec=null;return;} if(e.error==='aborted'){rec=null;setTimeout(start,300);}};
+   rec.onend=()=>{rec=null;starting=false;if(!document.hidden)setTimeout(start,250);};
+   try{rec.start();}catch(e){rec=null;starting=false;setTimeout(start,500);}
+ }
+ window.startJanet=start;
+ window.addEventListener('load',()=>setTimeout(start,900));
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!rec&&!starting)setTimeout(start,300);});
+})();
+</script>
+<script>
+window.addEventListener('load',function(){
+ if(typeof initCarlinkMap==='function') initCarlinkMap();
+ if(typeof refreshCarlinkDashboard==='function'){refreshCarlinkDashboard();setInterval(refreshCarlinkDashboard,3000);}
+});
+</script>
+</body>
+</html>
